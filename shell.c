@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 #define MAX 200
 
 // struct to store the commands
@@ -119,13 +120,9 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	//printf("*******************************\n");
-
 	// redirecting the commands
-	pid_t* child = (pid_t*) malloc(*quantity * sizeof(pid_t));
+	pid_t child[*quantity];
 	for(int i = 0; i < *quantity; i++) {
-		printf("** (parent - %d) command (%d - %s)\n", getpid(), i,  coms[i].com[0]);
-
 		for(int j=0; j<i; j++){
 		    if(j!=i && j!=i-1){
 		        close(pipes[j].pipe_ends[0]);
@@ -135,7 +132,7 @@ int main(int argc, char **argv) {
 		if(*quantity > 1 && i!=0) {
 			close(pipes[i-1].pipe_ends[1]);
 		}
-		//coms[i].child = fork();
+
         child[i] = fork();
 		if(child[i] < 0) {
 			perror("fork child");
@@ -143,26 +140,40 @@ int main(int argc, char **argv) {
 		}
 		if(child[i] == 0) {
 			if(i == 0) { // first command
-				printf("^^ (first child - %d) command %d\n", getpid(), i);
 				dup2(pipes[i].pipe_ends[1], STDOUT_FILENO);
 				close(pipes[i].pipe_ends[1]);
 			}
-			if(i == *quantity-1) {//*quantity-1) { // last command
-				printf("^^ (last child - %d) command (last) %d\n", getpid(), i);
+			if(i == *quantity-1) { // last command
 				dup2(pipes[i-1].pipe_ends[0], STDIN_FILENO);
 				close(pipes[i-1].pipe_ends[0]);
 			} else { // middle command
-				printf("^^ (mid child - %d) command %d\n", getpid(), i);
 				dup2(pipes[i-1].pipe_ends[0], STDIN_FILENO);
 				close(pipes[i-1].pipe_ends[0]);
 				dup2(pipes[i].pipe_ends[1], STDOUT_FILENO);
 				close(pipes[i].pipe_ends[1]);
 			}
 
-			execvp(coms[i].com[0], coms[i].com);
+			for(int k = 0; coms[i].com[k] != NULL; k++) {
+				if(*coms[i].com[k] == '<') {
+                    coms[i].com[k] = NULL;
+                    k++;
+                    int file = open(coms[i].com[k], O_RDONLY);
+                    dup2(file, STDIN_FILENO);
+                    close(file);
+                } else if(*coms[i].com[k] == '>') {
+                    coms[i].com[k] = NULL;
+                    k++;
+                    int file = open(coms[i].com[k], O_WRONLY | O_CREAT | O_TRUNC, 0666);
+                    dup2(file, STDOUT_FILENO);
+                    close(file);
+                }
+			}
 
+            if(execvp(coms[i].com[0], coms[i].com) < 0) {
+            	perror("execvp child");
+            	return -1;
+            }
 		} else {
-			printf("** (parent - %d) waiting child (%d)\n", getpid(), child[i]);
 			waitpid(child[i], NULL, 0);
 		}
 	}
