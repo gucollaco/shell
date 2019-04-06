@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <string.h>
+#include <ctype.h>
 #define MAX 512
 
 // struct to store the commands
@@ -61,6 +62,43 @@ int command_parser(char **command) {
 	return counter;
 }
 
+char *skipwhite(char* s)
+{
+	while (isspace(*s)) ++s;
+	return s;
+}
+
+int split(char **command)
+{
+	printf("asjndoas ");
+	char buffer[MAX];
+	fgets(buffer, MAX, stdin);
+
+	char *cmd;
+	cmd = skipwhite(buffer);
+	char* next = strchr(cmd, ' ');
+	int i = 0;
+ 
+	while(next != NULL) {
+		next[0] = '\0';
+		command[i] = cmd;
+		++i;
+		cmd = skipwhite(next + 1);
+		next = strchr(cmd, ' ');
+	}
+ 
+	if (cmd[0] != '\0') {
+		command[i] = cmd;
+		next = strchr(cmd, '\n');
+		next[0] = '\0';
+		++i; 
+	}
+ 
+	command[i] = NULL;
+	
+	return i;
+}
+
 int main() {
 	while(1) {
 		char **command = malloc(MAX * sizeof(char*));
@@ -70,7 +108,7 @@ int main() {
 		
 		// getting the user's input
 		// then checking the pipes' position
-		counter = command_parser(command);
+		counter = split(command);
 		pos = get_pipe_pos(counter, command);
 		quantity = &pos[0];
 
@@ -103,20 +141,20 @@ int main() {
 				return -1;
 			}
 		}
-		
-		for (int c = 0 ; c < counter; c++) {
-			printf("command[%d]: %s \n", c, *&command[c]);
-		}
+
 		// redirecting the commands
 		pid_t child[*quantity];
 		for(int i = 0; i < *quantity; i++) {
 			// first, let's close what we won't need
 			for(int j = 0; j < i; j++){
-				if(j!=i && j!=i-1){
+				if(j != i && j != i-1){
 				    close(pipes[j].pipe_ends[0]);
 				    close(pipes[j].pipe_ends[1]);
 				}
 			}
+		    if(*quantity > 1 && i != 0) {
+		        close(pipes[i - 1].pipe_ends[1]);
+		    }
 
 			// checking if has background sign
 			// if so, the parent's work will be different
