@@ -1,3 +1,5 @@
+//Gustavo Martins Collaço 111851
+//Tamires Beatriz da Silva Lucena 111866
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -36,66 +38,67 @@ int *get_pipe_pos(int quantity, char **command) {
 	return out;
 }
 
-int command_parser(char **command) {
-	// reading the user's command
-	// then splitting it by the space delimiter
+char* replace_char(char* cmd, char find, char rep){
+    char *cur_pos = strchr(cmd, find);
+    while(cur_pos != NULL) {
+        *cur_pos = rep;
+        cur_pos = strchr(cur_pos, find);
+    }
+}
+
+char *skip(char* s) {
+	while(isspace(*s)) s++;
+	return s;
+}
+
+int split(char **command) {
 	printf("~ ");
 	char buffer[MAX];
 	fgets(buffer, MAX, stdin);
 
-	char *line;
-	char *sep = " ";
-
-	line = strtok(buffer, sep);
-
-	int counter = 0;
-	while(line != NULL) {
-		char *newline = strchr(line, '\n');
-		if(newline) *newline = 0;
-		command[counter] = line;
-		counter++;
-		line = strtok(NULL, sep);
-	}
-	command[counter] = NULL;
-	command = realloc(command, (counter+1) * sizeof(char*));
-
-	return counter;
-}
-
-char *skipwhite(char* s)
-{
-	while (isspace(*s)) ++s;
-	return s;
-}
-
-int split(char **command)
-{
-	printf("asjndoas ");
-	char buffer[MAX];
-	fgets(buffer, MAX, stdin);
-
 	char *cmd;
-	cmd = skipwhite(buffer);
-	char* next = strchr(cmd, ' ');
+	cmd = replace_char(buffer, '\'', ' ');
+	cmd = skip(buffer);
+	char *next = strchr(cmd, ' ');
 	int i = 0;
- 
+
 	while(next != NULL) {
 		next[0] = '\0';
 		command[i] = cmd;
-		++i;
-		cmd = skipwhite(next + 1);
+		i++;
+		cmd = skip(next + 1);
 		next = strchr(cmd, ' ');
 	}
- 
-	if (cmd[0] != '\0') {
+
+	if(cmd[0] != '\0') {
 		command[i] = cmd;
 		next = strchr(cmd, '\n');
 		next[0] = '\0';
-		++i; 
+		i++;
 	}
- 
+
+	int old_i = i;
+	for(int j = 0; j < i; j++) {
+		if(command[j][0] == '$') {
+			strcat(command[j-1], command[j]);
+			command[j] = NULL;
+			// shifting everyone to the left
+			if(j < (i-1)) {
+				for(int k = j; k < i; k++) {
+					command[k] = command[k+1];
+				}
+			}
+			i--;
+		}
+	}
+
+	/*for(int j = 0; j < old_i; j++) {
+		printf("commands: %s \n", command[j]);
+	}*/
+
 	command[i] = NULL;
-	
+	command = realloc(command, (i+1) * sizeof(char*));
+
 	return i;
 }
 
@@ -208,6 +211,7 @@ int main() {
 						}
 		                dup2(file, STDOUT_FILENO);
 		                close(file);
+		                //coms[i].com[k] = NULL;
 		            }
 				}
 
