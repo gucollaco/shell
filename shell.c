@@ -1,5 +1,3 @@
-//Gustavo Martins Collaço 111851
-//Tamires Beatriz da Silva Lucena 111866
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -91,10 +89,6 @@ int split(char **command) {
 			i--;
 		}
 	}
-
-	/*for(int j = 0; j < old_i; j++) {
-		printf("commands: %s \n", command[j]);
-	}*/
 
 	command[i] = NULL;
 	command = realloc(command, (i+1) * sizeof(char*));
@@ -211,7 +205,6 @@ int main() {
 						}
 		                dup2(file, STDOUT_FILENO);
 		                close(file);
-		                //coms[i].com[k] = NULL;
 		            }
 				}
 
